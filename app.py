@@ -3,6 +3,7 @@ import torch
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 from model import FullModelHAT
+from huggingface_hub import hf_hub_download
 
 CLASS_NAMES = [
     'Background', 'Water', 'Building - No Damage', 'Building - Minor Damage',
@@ -15,9 +16,16 @@ CLASS_COLORS = np.array([
     [255,0,0],[255,0,245],[140,140,140],[160,150,20],[4,250,7],[255,235,0]
 ], dtype=np.uint8)
 
+
+checkpoint_path = hf_hub_download(
+    repo_id="shashikanth101/dda",
+    filename="checkpoint.pth"
+)
+
+
 device = torch.device("cpu")
 model = FullModelHAT(num_classes=11)
-checkpoint = torch.load("checkpoint.pth", map_location=device)
+checkpoint = torch.load(checkpoint_path, map_location=device)
 model.load_state_dict(checkpoint["model_state"])
 model.eval()
 
