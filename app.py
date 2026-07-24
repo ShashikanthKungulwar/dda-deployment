@@ -28,7 +28,8 @@ checkpoint_path = hf_hub_download(
 
 device = torch.device("cpu")
 model = FullModelHAT(num_classes=11)
-checkpoint = torch.load(checkpoint_path, map_location=device)
+# checkpoint = torch.load(checkpoint_path, map_location=device)
+checkpoint = torch.load(checkpoint_path, map_location=device, mmap=True, weights_only=True)
 model.load_state_dict(checkpoint["model_state"])
 del checkpoint
 model.eval()
