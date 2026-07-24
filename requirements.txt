@@ -4,3 +4,4 @@ gradio
 numpy
 pillow
 huggingface_hub
+timm
