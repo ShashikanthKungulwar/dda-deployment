@@ -8,6 +8,16 @@ from model import FullModelHAT
 from huggingface_hub import hf_hub_download
 import os
 
+import resource
+
+def log_memory(tag):
+    mem = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024  # MB on Linux
+    print(f"[MEMORY] {tag}: {mem:.1f} MB", flush=True)
+
+log_memory("after imports")
+
+
+
 CLASS_NAMES = [
     'Background', 'Water', 'Building - No Damage', 'Building - Minor Damage',
     'Building - Major Damage', 'Building - Total Destruction', 'Vehicle',
@@ -19,20 +29,28 @@ CLASS_COLORS = np.array([
     [255,0,0],[255,0,245],[140,140,140],[160,150,20],[4,250,7],[255,235,0]
 ], dtype=np.uint8)
 
-
+log_memory("before download")
 checkpoint_path = hf_hub_download(
     repo_id="shashikanth101/dda",
     filename="checkpoint.pth"
 )
-
+log_memory("after download")
 
 device = torch.device("cpu")
 model = FullModelHAT(num_classes=11)
+log_memory("after model init")
+
+
 # checkpoint = torch.load(checkpoint_path, map_location=device)
 checkpoint = torch.load(checkpoint_path, map_location=device, mmap=True, weights_only=True)
+log_memory("after torch.load")
+
 model.load_state_dict(checkpoint["model_state"])
 del checkpoint
+log_memory("after load_state_dict + del")
+
 model.eval()
+log_memory("after eval()")
 
 
 def preprocess(image):
