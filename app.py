@@ -1,9 +1,12 @@
 import gradio as gr
 import torch
+torch.set_num_threads(1)
+
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 from model import FullModelHAT
 from huggingface_hub import hf_hub_download
+import os
 
 CLASS_NAMES = [
     'Background', 'Water', 'Building - No Damage', 'Building - Minor Damage',
@@ -27,6 +30,7 @@ device = torch.device("cpu")
 model = FullModelHAT(num_classes=11)
 checkpoint = torch.load(checkpoint_path, map_location=device)
 model.load_state_dict(checkpoint["model_state"])
+del checkpoint
 model.eval()
 
 
@@ -95,4 +99,5 @@ demo = gr.Interface(
 )
 
 if __name__ == "__main__":
-    demo.launch()
+    # demo.launch()
+     demo.launch(server_name="0.0.0.0", server_port=int(os.environ.get("PORT", 7860)))
