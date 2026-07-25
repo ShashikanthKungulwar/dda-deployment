@@ -4,6 +4,15 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 from huggingface_hub import hf_hub_download
 import os
+import resource
+
+
+def log_memory(tag):
+    mem = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024  # MB on Linux
+    print(f"[MEMORY] {tag}: {mem:.1f} MB", flush=True)
+
+
+log_memory("start")
 
 CLASS_NAMES = [
     'Background', 'Water', 'Building - No Damage', 'Building - Minor Damage',
@@ -16,13 +25,19 @@ CLASS_COLORS = np.array([
     [255,0,0],[255,0,245],[140,140,140],[160,150,20],[4,250,7],[255,235,0]
 ], dtype=np.uint8)
 
+log_memory("before download")
+
 # Download the quantized ONNX model (single self-contained file)
 onnx_path = hf_hub_download(
     repo_id="shashikanth101/dda",
     filename="rescueseg_model_quantized.onnx"
 )
 
+log_memory("after download")
+
 session = ort.InferenceSession(onnx_path, providers=["CPUExecutionProvider"])
+
+log_memory("after session init")
 
 
 def preprocess(image):
@@ -64,19 +79,28 @@ def build_legend():
 
 LEGEND_IMAGE = build_legend()
 
+log_memory("after legend built (startup complete)")
+
 
 def segment(image, alpha=0.55):
+    log_memory("segment() called - before preprocess")
+
     tensor, resized_image = preprocess(image)
+    log_memory("after preprocess")
 
     outputs = session.run(
         ["segmentation_mask", "edge_map"],
         {"input_image": tensor}
     )
+    log_memory("after session.run (inference)")
+
     pred_mask, edge_map = outputs
     pred = np.argmax(pred_mask, axis=1).squeeze(0)
 
     color_mask = CLASS_COLORS[pred]
     overlay = (alpha * color_mask + (1 - alpha) * np.array(resized_image)).astype(np.uint8)
+
+    log_memory("after postprocessing - segment() returning")
 
     return Image.fromarray(color_mask), Image.fromarray(overlay), LEGEND_IMAGE
 
