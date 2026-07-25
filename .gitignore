@@ -222,3 +222,7 @@ __marimo__/
 .streamlit/secrets.toml
 checkpoint.pth
 checkpoit.py
+onxx.py
+verification.py
+rescueseg_model.onnx
+rescueseg_model.onnx.data

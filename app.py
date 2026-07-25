@@ -1,22 +1,9 @@
 import gradio as gr
-import torch
-torch.set_num_threads(1)
-
+import onnxruntime as ort
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
-from model import FullModelHAT
 from huggingface_hub import hf_hub_download
 import os
-
-import resource
-
-def log_memory(tag):
-    mem = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024  # MB on Linux
-    print(f"[MEMORY] {tag}: {mem:.1f} MB", flush=True)
-
-log_memory("after imports")
-
-
 
 CLASS_NAMES = [
     'Background', 'Water', 'Building - No Damage', 'Building - Minor Damage',
@@ -29,37 +16,24 @@ CLASS_COLORS = np.array([
     [255,0,0],[255,0,245],[140,140,140],[160,150,20],[4,250,7],[255,235,0]
 ], dtype=np.uint8)
 
-log_memory("before download")
-checkpoint_path = hf_hub_download(
+onnx_path = hf_hub_download(
     repo_id="shashikanth101/dda",
-    filename="checkpoint.pth"
+    filename="rescueseg_model.onnx"
 )
-log_memory("after download")
+hf_hub_download(
+    repo_id="shashikanth101/dda",
+    filename="rescueseg_model.onnx.data"
+)
 
-device = torch.device("cpu")
-model = FullModelHAT(num_classes=11)
-log_memory("after model init")
-
-
-# checkpoint = torch.load(checkpoint_path, map_location=device)
-checkpoint = torch.load(checkpoint_path, map_location=device, mmap=True, weights_only=True)
-log_memory("after torch.load")
-
-model.load_state_dict(checkpoint["model_state"])
-del checkpoint
-log_memory("after load_state_dict + del")
-
-model.eval()
-log_memory("after eval()")
-
+session = ort.InferenceSession(onnx_path, providers=["CPUExecutionProvider"])
 
 def preprocess(image):
     image = image.convert("RGB").resize((384, 384), Image.LANCZOS)
     img_np = np.array(image).astype(np.float32) / 255.0
-    mean = np.array([0.485, 0.456, 0.406])
-    std = np.array([0.229, 0.224, 0.225])
+    mean = np.array([0.485, 0.456, 0.406], dtype=np.float32)
+    std = np.array([0.229, 0.224, 0.225], dtype=np.float32)
     img_np = (img_np - mean) / std
-    tensor = torch.from_numpy(img_np).permute(2, 0, 1).float().unsqueeze(0)
+    tensor = img_np.transpose(2, 0, 1)[np.newaxis, :, :, :].astype(np.float32)
     return tensor, image
 
 
@@ -90,14 +64,18 @@ def build_legend():
     return legend
 
 
-LEGEND_IMAGE = build_legend()  # build once, reuse for every prediction
+LEGEND_IMAGE = build_legend()
 
 
 def segment(image, alpha=0.55):
     tensor, resized_image = preprocess(image)
-    with torch.no_grad():
-        pred_mask, edge_map = model(tensor)
-        pred = torch.argmax(pred_mask, dim=1).squeeze(0).numpy()
+
+    outputs = session.run(
+        ["segmentation_mask", "edge_map"],
+        {"input_image": tensor}
+    )
+    pred_mask, edge_map = outputs
+    pred = np.argmax(pred_mask, axis=1).squeeze(0)
 
     color_mask = CLASS_COLORS[pred]
     overlay = (alpha * color_mask + (1 - alpha) * np.array(resized_image)).astype(np.uint8)
@@ -115,8 +93,8 @@ demo = gr.Interface(
     ],
     title="RescueSeg: Aerial Disaster Damage Segmentation",
     description="Hybrid-Attention Transformer trained on RescueNet. 44.0% mIoU (reduced-epoch ablation run).",
+    flagging_mode="never",
 )
 
 if __name__ == "__main__":
-    # demo.launch()
-     demo.launch(server_name="0.0.0.0", server_port=int(os.environ.get("PORT", 7860)))
+    demo.launch(server_name="0.0.0.0", server_port=int(os.environ.get("PORT", 7860)))
