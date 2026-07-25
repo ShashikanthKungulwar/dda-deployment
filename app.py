@@ -16,16 +16,14 @@ CLASS_COLORS = np.array([
     [255,0,0],[255,0,245],[140,140,140],[160,150,20],[4,250,7],[255,235,0]
 ], dtype=np.uint8)
 
+# Download the quantized ONNX model (single self-contained file)
 onnx_path = hf_hub_download(
     repo_id="shashikanth101/dda",
-    filename="rescueseg_model.onnx"
-)
-hf_hub_download(
-    repo_id="shashikanth101/dda",
-    filename="rescueseg_model.onnx.data"
+    filename="rescueseg_model_quantized.onnx"
 )
 
 session = ort.InferenceSession(onnx_path, providers=["CPUExecutionProvider"])
+
 
 def preprocess(image):
     image = image.convert("RGB").resize((384, 384), Image.LANCZOS)
