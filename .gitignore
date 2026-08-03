@@ -226,3 +226,7 @@ onxx.py
 verification.py
 rescueseg_model.onnx
 rescueseg_model.onnx.data
+*.onnx
+*.onnx.data
+infer.py
+quantize.py

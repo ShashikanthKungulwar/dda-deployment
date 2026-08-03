@@ -1,0 +1,56 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Git
+.git/
+.gitignore
+
+# IDE/editor
+.vscode/
+.idea/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Local model files (downloaded at runtime from HuggingFace Hub instead)
+*.onnx
+*.onnx.data
+*.pth
+
+# Local notebooks/testing files
+*.ipynb
+.ipynb_checkpoints/
+
+# Logs
+*.log
+
+# Local training data (not needed for the demo)
+rescuenet_data/
+rescuenet/
+outputs/
+
+# Environment variables (never bake secrets into the image)
+.env
+
+
+# Streamlit
+.streamlit/secrets.toml
+checkpoint.pth
+checkpoit.py
+onxx.py
+verification.py
+rescueseg_model.onnx
+rescueseg_model.onnx.data
+*.onnx
+*.onnx.data
+infer.py
+quantize.py
+
